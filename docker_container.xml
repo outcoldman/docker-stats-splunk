@@ -1,0 +1,92 @@
+<form>
+  <label>Docker Container</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="dropdown" token="selected_container_id" searchWhenChanged="true">
+      <label>Container</label>
+      <search>
+          <query>
+              source=docker_inspect |
+              rename "Config.Image" as image_name |
+              dedup Id |
+              eval container_id=substr(mvindex(Id,0), 0, 12) |
+              eval container_label=ltrim(mvindex(Name,0), "/") + " ("+mvindex(image_name,0)+" - " + container_id + ")" |
+              table container_label, container_id |
+              sort container_label
+          </query>
+        <earliest>-60m@m</earliest>
+        <latest>now</latest>
+      </search>
+      <fieldForLabel>container_label</fieldForLabel>
+      <fieldForValue>container_id</fieldForValue>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <table>
+        <title>Top processes</title>
+        <search>
+            <query>
+                sourcetype=DockerTop container_id=$selected_container_id$ |
+                join [
+                    search sourcetype=DockerTop container_id=$selected_container_id$ |
+                    head 1 |
+                    eval LatestEventsTime=_time |
+                    fields + LatestEventsTime
+                ] |
+                eval EventTime=_time |
+                eval vsz=vsz/1024/1024 |
+                stats sparkline(max(pcpu)) as pcpu_stats, sparkline(max(vsz)) as vsz_stats, first(pcpu) as pcpu, first(vsz) as vsz, first(etime) as etime, first(utime) as utime, first(EventTime) as et by pid, ppid, user, group, tty, comm, args, LatestEventsTime, nice |
+                eval TimeDiff=LatestEventsTime-et |
+                search TimeDiff=0 |
+                sort -pcpu |
+                table pid, ppid, user, group, nice, pcpu_stats, pcpu, vsz_stats, vsz, etime, utime, tty, comm, args
+            </query>
+          <earliest>-15m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">true</option>
+        <option name="drilldown">cell</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="count">20</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Latest events (24 hours)</title>
+        <search>
+            <query>
+                sourcetype=DockerEvents NOT _raw="*top" |
+                eval event=mvindex(split(_raw,") "), 1) |
+                eval container_id=substr(_raw, 32, 12) |
+                search container_id=$selected_container_id$  |
+                join [
+                    search source=docker_inspect |
+                    eval container_id=substr(mvindex(Id,0), 0, 12) |
+                    eval container_name=mvindex(Name,0) |
+                    table container_id, container_name |
+                    dedup container_id, container_name
+                ] |
+                table _time, container_name, event
+            </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="list.drilldown">full</option>
+        <option name="list.wrap">1</option>
+        <option name="maxLines">5</option>
+        <option name="raw.drilldown">full</option>
+        <option name="rowNumbers">true</option>
+        <option name="table.drilldown">all</option>
+        <option name="table.wrap">1</option>
+        <option name="type">list</option>
+        <option name="wrap">true</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+      </table>
+    </panel>
+  </row>
+</form>

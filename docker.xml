@@ -1,0 +1,361 @@
+<dashboard>
+  <label>Docker</label>
+  <row>
+    <panel>
+      <chart>
+        <title>CPU Usage - Last 4 hours - Max in time</title>
+        <search>
+            <query>
+                source=docker_stats |
+                eval cpu_percent_n=tonumber(rtrim(cpu_percent,"%")) |
+                stats sum(cpu_percent_n) as cpu_percent_n by _time |
+                timechart max(cpu_percent_n)
+            </query>
+          <earliest>-4h@m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">minimal</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">false</option>
+        <option name="dataOverlayMode">none</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Memory Usage (Gb) - Last 4 hours - Max in time</title>
+        <search>
+            <query>
+                source=docker_stats |
+                eval mem_usage_a=split(mem_usage," ") |
+                eval mem_usage_gb=case(
+                    mvindex(mem_usage_a,1)=="B",tonumber(mvindex(mem_usage_a,0))/1024/1024,
+                    mvindex(mem_usage_a,1)=="kB",tonumber(mvindex(mem_usage_a,0))/1024/1024,
+                    mvindex(mem_usage_a,1)=="MB",tonumber(mvindex(mem_usage_a,0))/1024,
+                    mvindex(mem_usage_a,1)=="GB",tonumber(mvindex(mem_usage_a,0))
+                ) |
+                eval mem_limit_a=split(mem_limit," ") |
+                eval mem_limit_gb=case(
+                    mvindex(mem_limit_a,1)=="B",tonumber(mvindex(mem_limit_a,0))/1024/1024,
+                    mvindex(mem_limit_a,1)=="kB",tonumber(mvindex(mem_limit_a,0))/1024/1024,
+                    mvindex(mem_limit_a,1)=="MB",tonumber(mvindex(mem_limit_a,0))/1024,
+                    mvindex(mem_limit_a,1)=="GB",tonumber(mvindex(mem_limit_a,0))
+                ) |
+                stats sum(mem_usage_gb) as mem_usage_gb, sum(mem_limit_gb) as mem_limit_gb by _time |
+                timechart max(mem_usage_gb), max(mem_limit_gb)
+            </query>
+          <earliest>-4h@m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">minimal</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.axisY.maximumNumber">32</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>CPU Usage Last 4 hours - Max by container</title>
+        <search>
+            <query>
+                source=docker_stats |
+                join [
+                    search source=docker_inspect |
+                    eval container_id=substr(mvindex(Id,0), 0, 12) |
+                    eval container_name=rtrim(ltrim(mvindex(Name,0), "/"), "_1") |
+                    table container_id, container_name |
+                    dedup container_id, container_name
+                ] |
+                timechart limit=20 max(cpu_percent) by container_name
+            </query>
+          <earliest>-4h@m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">minimal</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">false</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="count">10</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Memory Usage (100%) Last 4 hours - Max by container</title>
+        <search>
+            <query>
+                source=docker_stats |
+                join [
+                    search source=docker_inspect |
+                    eval container_id=substr(mvindex(Id,0), 0, 12) |
+                    eval container_name=rtrim(ltrim(mvindex(Name,0), "/"), "_1") |
+                    table container_id, container_name |
+                    dedup container_id, container_name
+                ] |
+                timechart limit=20 max(mem_percent) by container_name
+            </query>
+          <earliest>-4h@m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">minimal</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.axisY.maximumNumber">100</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Network Input (Kb) Last 4 hours</title>
+        <search>
+            <query>
+                source=docker_stats |
+                eval net_input_a=split(net_input," ") |
+                eval net_int_mb=case(
+                    mvindex(net_input_a,1)=="B",tonumber(mvindex(net_input_a,0))/1024,
+                    mvindex(net_input_a,1)=="kB",tonumber(mvindex(net_input_a,0)),
+                    mvindex(net_input_a,1)=="MB",tonumber(mvindex(net_input_a,0))*1024,
+                    mvindex(net_input_a,1)=="GB",tonumber(mvindex(net_input_a,0))*1024*1024
+                ) |
+                join [
+                    search source=docker_inspect |
+                    eval container_id=substr(mvindex(Id,0), 0, 12) |
+                    eval container_name=rtrim(ltrim(mvindex(Name,0), "/"), "_1") |
+                    table container_id, container_name |
+                    dedup container_id, container_name
+                ] |
+                stats avg(net_int_mb) as net_int_mb by _time, container_name |
+                streamstats window=1 global=f current=f first(net_int_mb) as f_net_int_mb by container_name |
+                eval delta=net_int_mb-f_net_int_mb |
+                eval delta=if(delta&lt;0,0,delta) |
+                timechart limit=20 avg(delta) by container_name
+            </query>
+          <earliest>-4h@m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">minimal</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Network Output (Kb) Last 4 hours</title>
+        <search>
+            <query>
+                source=docker_stats |
+                eval net_output_a=split(net_output," ") |
+                eval net_out_mb=case(
+                    mvindex(net_output_a,1)=="B",tonumber(mvindex(net_output_a,0))/1024,
+                    mvindex(net_output_a,1)=="kB",tonumber(mvindex(net_output_a,0)),
+                    mvindex(net_output_a,1)=="MB",tonumber(mvindex(net_output_a,0))*1024,
+                    mvindex(net_output_a,1)=="GB",tonumber(mvindex(net_output_a,0))*1024*1024
+                ) |
+                join [
+                    search source=docker_inspect |
+                    eval container_id=substr(mvindex(Id,0), 0, 12) |
+                    eval container_name=rtrim(ltrim(mvindex(Name,0), "/"), "_1") |
+                    table container_id, container_name |
+                    dedup container_id, container_name
+                ] |
+                stats avg(net_out_mb) as net_out_mb by _time, container_name |
+                streamstats window=1 global=f current=f first(net_out_mb) as f_net_out_mb by container_name |
+                eval delta=net_out_mb-f_net_out_mb |
+                eval delta=if(delta&lt;0,0,delta) |
+                timechart limit=20 avg(delta) by container_name
+            </query>
+          <earliest>-4h@m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">minimal</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Last Events</title>
+        <search>
+            <query>
+                sourcetype=DockerEvents NOT _raw="*top" |
+                head 100 |
+                eval event=mvindex(split(_raw,") "), 1) |
+                eval container_id=substr(_raw, 32, 12) |
+                join [
+                    search source=docker_inspect |
+                    eval container_id=substr(mvindex(Id,0), 0, 12) |
+                    eval container_name=mvindex(Name,0) |
+                    table container_id, container_name |
+                    dedup container_id, container_name
+                ] |
+                table _time, container_name, event
+            </query>
+          <earliest>-4h@m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">false</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="count">10</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Top (60 min)</title>
+        <search>
+            <query>
+                sourcetype=DockerTop |
+                join [
+                    search sourcetype=DockerTop |
+                    eval LatestEventsTime=_time  |
+                    stats first(LatestEventsTime) as LatestEventsTime by container_id
+                ] |
+                eval EventTime=_time |
+                eval vsz=vsz/1024/1024 |
+                join [
+                    search source=docker_inspect |
+                    eval container_id=substr(mvindex(Id,0), 0, 12) |
+                    eval container_name=mvindex(Name,0) |
+                    table container_id, container_name |
+                    dedup container_id, container_name
+                ] |
+                stats sparkline(max(pcpu)) as pcpu_stats, sparkline(max(vsz)) as vsz_stats, first(pcpu) as pcpu, first(vsz) as vsz, first(etime) as etime, first(utime) as utime, first(EventTime) as et by pid, ppid, user, group, tty, comm, args, container_name, LatestEventsTime |
+                eval TimeDiff=LatestEventsTime-et |
+                search TimeDiff=0 |
+                sort -pcpu |
+                table container_name, pid, ppid, user, group, nice, pcpu_stats, pcpu, vsz_stats, vsz, etime, utime, tty, comm, args
+            </query>
+          <earliest>-60m@m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">false</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="count">10</option>
+      </table>
+    </panel>
+  </row>
+</dashboard>
