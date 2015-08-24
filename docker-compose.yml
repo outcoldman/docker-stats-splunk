@@ -1,0 +1,23 @@
+vsplunk:
+  image: busybox
+  volumes:
+    - /opt/splunk/etc
+    - /opt/splunk/var
+
+splunk:
+  image: outcoldman/docker-stats-splunk:latest
+  hostname: splunk
+  volumes_from:
+    - vsplunk
+  ports:
+    - 8000:8000
+
+dockerforwarder:
+  image: outcoldman/docker-stats-splunk-forwarder:latest
+  hostname: dockerforwarder
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+  links:
+    - splunk
+  environment:
+    - SPLUNK_FORWARD_SERVER=splunk:9997
