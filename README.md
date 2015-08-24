@@ -100,7 +100,7 @@ dockerforwarder:
   links:
     - splunk
   environment:
-    - SPLUNK_FORWARD_SERVER=splunk_indexer:9997
+    - SPLUNK_FORWARD_SERVER=splunk:9997
 ```
 
 ## Configuration
