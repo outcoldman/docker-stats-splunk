@@ -26,7 +26,7 @@ great with [docker-stats-splunk-forwarder](https://hub.docker.com/r/outcoldman/d
 
 ## Version
 
-- Splunk Light: `6.2.5`
+- Splunk Light: `latest`
 
 ## Installation
 
@@ -70,7 +70,7 @@ docker run --hostname splunk \
 docker run --hostname dockerforwarder \
     --name dockerforwarder \
     --link=splunk \
-    --volume /var/run/docker.sock:/var/run/docker.sock:r \
+    --volume /var/run/docker.sock:/var/run/docker.sock:ro \
     -e "SPLUNK_FORWARD_SERVER=splunk:9997" \
     -d outcoldman/docker-stats-splunk-forwarder:latest
 ```
@@ -120,6 +120,8 @@ and you will see 2 Dashboards.
 - Memory Usage per container (% of limit)
 - Network Input per container
 - Network Output per container
+- Disk Input per container
+- Disk Output per container
 - Last Events (excluding `top` as I query it regularly)
 - Top processes from all container
 

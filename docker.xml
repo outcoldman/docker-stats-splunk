@@ -292,6 +292,112 @@
   </row>
   <row>
     <panel>
+      <chart>
+        <title>Block Input (Kb) Last 4 hours</title>
+        <search>
+            <query>
+                source=docker_stats |
+                eval block_input_a=split(block_input," ") |
+                eval block_int_mb=case(
+                    mvindex(block_input_a,1)=="B",tonumber(mvindex(block_input_a,0))/1024,
+                    mvindex(block_input_a,1)=="kB",tonumber(mvindex(block_input_a,0)),
+                    mvindex(block_input_a,1)=="MB",tonumber(mvindex(block_input_a,0))*1024,
+                    mvindex(block_input_a,1)=="GB",tonumber(mvindex(block_input_a,0))*1024*1024
+                ) |
+                join [
+                    search source=docker_inspect |
+                    eval container_id=substr(mvindex(Id,0), 0, 12) |
+                    eval container_name=rtrim(ltrim(mvindex(Name,0), "/"), "_1") |
+                    table container_id, container_name |
+                    dedup container_id, container_name
+                ] |
+                stats avg(block_int_mb) as block_int_mb by _time, container_name |
+                streamstats window=1 global=f current=f first(block_int_mb) as f_block_int_mb by container_name |
+                eval delta=block_int_mb-f_block_int_mb |
+                eval delta=if(delta&lt;0,0,delta) |
+                timechart limit=20 avg(delta) by container_name
+            </query>
+          <earliest>-4h@m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">minimal</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Block Output (Kb) Last 4 hours</title>
+        <search>
+            <query>
+                source=docker_stats |
+                eval block_output_a=split(block_output," ") |
+                eval block_out_mb=case(
+                    mvindex(block_output_a,1)=="B",tonumber(mvindex(block_output_a,0))/1024,
+                    mvindex(block_output_a,1)=="kB",tonumber(mvindex(block_output_a,0)),
+                    mvindex(block_output_a,1)=="MB",tonumber(mvindex(block_output_a,0))*1024,
+                    mvindex(block_output_a,1)=="GB",tonumber(mvindex(block_output_a,0))*1024*1024
+                ) |
+                join [
+                    search source=docker_inspect |
+                    eval container_id=substr(mvindex(Id,0), 0, 12) |
+                    eval container_name=rtrim(ltrim(mvindex(Name,0), "/"), "_1") |
+                    table container_id, container_name |
+                    dedup container_id, container_name
+                ] |
+                stats avg(block_out_mb) as block_out_mb by _time, container_name |
+                streamstats window=1 global=f current=f first(block_out_mb) as f_block_out_mb by container_name |
+                eval delta=block_out_mb-f_block_out_mb |
+                eval delta=if(delta&lt;0,0,delta) |
+                timechart limit=20 avg(delta) by container_name
+            </query>
+          <earliest>-4h@m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">minimal</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
       <table>
         <title>Last Events</title>
         <search>
