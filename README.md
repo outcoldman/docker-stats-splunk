@@ -1,3 +1,7 @@
+> IMPORTANT: Please look on our solutions for Collecting Logs and Metrics from Docker and Kuberenetes https://www.outcoldsolutions.com 
+> Current repo is not supported.
+
+
 # Table of Contents
 
 - [Supported tags](#supported-tags)
